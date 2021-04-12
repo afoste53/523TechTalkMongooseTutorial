@@ -1,12 +1,17 @@
 import mongoose from "mongoose";
 
+// Define schema to define the structure for User
+// What makes a User a User?
+
+// const yourSchema = new mongoose.Schema({schema object}, {options object});
+// const yourModel = mongoose.model("A_Model", yourSchema);
+
 // Define schema for User model
 const UserSchema = new mongoose.Schema(
   {
-    // First Field
     name: {
       type: String,
-      // Set filed as required and define the message to be reported if field is left blank
+      // Set required and define the message to be reported if field is left blank
       required: [true, "Please add a name"],
     },
     email: {
@@ -30,18 +35,16 @@ const UserSchema = new mongoose.Schema(
       // set select to false to make sure it's not passed along later when queried
       select: false,
     },
-    type: {
+    role: {
       type: "string",
       // By creating enumerations we can add security so that
       // a user can only be created as a user or as an admin
-      enum: ["user", "admin"],
-      // Set a default so that we don't have to specify unless
-      // we are creating an admin (the special/more-rare case)
-      default: "user",
+      enum: ["student", "teacher", "admin"],
+      default: "student",
     },
     // If all you need to specify is the type
     // you don't have to set it to an object, just the type
-    fav_iceCream: "string",
+    age: "number",
   },
   // We can pass an optional options object to enable specific options
   // ex include a timestamp for when it was created/edited
@@ -50,6 +53,6 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-// Name and export Model
+// Create the model by passing the name, and schema
 const User = mongoose.model("User", UserSchema);
 export default User;

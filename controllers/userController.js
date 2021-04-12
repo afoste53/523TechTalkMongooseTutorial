@@ -1,14 +1,63 @@
 // Import the model
 import User from "../models/Users.js";
 
-// GET all users
+// It's in the CRUD controller functions that we
+// find the various mongoDb queries
+
+// Create a new user
+// POST /api/users
+const createUser = async (req, res) => {
+  // Pull info from body of request
+  const { name, email, password, role, age } = req.body;
+
+  // We can use findOne() to see if the user already exists
+  const userExists = await User.findOne({ email });
+  // OR we can make it more readable by chaining commands
+  // const userExists = await User.findOne().where('email').equals(`${email}`);
+
+  // If they exists we return 400 and complain
+  if (userExists) {
+    res.status(400).send({
+      Success: false,
+      Error: "User already associated with this email",
+    });
+  }
+
+  try {
+    // If they don't exist, we need to create the new user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role,
+      age,
+    });
+    res.status(201).json({
+      Success: true,
+      user,
+    });
+  } catch (err) {
+    res.status(400).send({
+      Success: false,
+      Error: err.message,
+    });
+  }
+};
+
+// Read(get) all users
 // GET /api/users
 const getAllUsers = async (req, res) => {
+  // We can use find() to pull all documents that matches our filter
+  // We pass no filter to return all documents in the DB
+  // This will return an array of all users
   const users = await User.find();
-  if (users) {
+
+  // If the db wasn't empty we will send whatever we 'find()ed'
+  if (users.length > 0) {
     try {
       res.status(200).json({
         Success: true,
+        Number_of_Users: users.length,
         users,
       });
     } catch (err) {
@@ -19,12 +68,15 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// GET specific user by id
+// Read(get) specific user by id
 // GET /api/users/:id
 const getUserById = async (req, res) => {
+  // Get the id from the request parameters object
   const id = req.params.id;
-  // can use find() with a filter OR findById()
+
+  // We can use find() with a filter
   const user = await User.find({ _id: id });
+  // OR findById()
   //const user = await User.findById(id);
 
   if (user.length !== 0) {
@@ -45,80 +97,41 @@ const getUserById = async (req, res) => {
   }
 };
 
-// Register a new user
-// POST /api/users
-const registerUser = async (req, res) => {
-  // Pull info from body of request
-  const { name, email, password, type, fav_iceCream } = req.body;
-
-  // We can use findOne() method to see if the user already exists
-  // and throw error if they do
-  // OR we can make it more readable by chaining commands
-  const userExists = await User.findOne({ email });
-  // const userExists = await User.findOne().where('email').equals(`${email}`);
-  if (userExists) {
-    res.status(400).send({
-      Success: false,
-      Error: "User already associated with this email",
-    });
-  }
-
-  try {
-    // If they don't exist, we need to create the new user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      type,
-      fav_iceCream,
-    });
-    res.status(201).json({
-      Success: true,
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      type: user.type,
-      "Favorite Ice Cream": user.fav_iceCream,
-    });
-  } catch (err) {
-    res.status(400).send({
-      Success: false,
-      Error: err.message,
-    });
-  }
-};
-
 // Update a  user
 // PUT /api/users/:id
 const updateUser = async (req, res) => {
-  // Pull info from body of request
-  const { name, email, password, type, fav_iceCream } = req.body;
+  // Pull the user's _id from the request parameters
   const id = req.params.id;
 
-  // We can use findOneAndUpdate OR
-  // chain an updateOne() call to a find()
+  // Pull info from body of request
+  const { name, email, password, role, age } = req.body;
+
   try {
-    await User.findOneAndUpdate(
+    // We can use findOneAndUpdate()
+    const user = await User.findOneAndUpdate(
       { _id: id },
-      { name, email, password, type, fav_iceCream }
+      { name, email, password, role, age }
     );
-    // await User.findById(id).updateOne(
-    //   {},
-    //   {
-    //     name,
-    //     email,
-    //     password,
-    //     type,
-    //     fav_iceCream,
-    //   }
-    // );
+
+    /*
+    // OR we chain an updateOne() call to a find()
+    await User.findById(id).updateOne(
+      {},
+      {
+        name,
+        email,
+        password,
+        role,
+        age,
+      }
+    );*/
+
     res.status(202).json({
       Success: true,
-      name,
-      email,
-      password,
-      type,
-      fav_iceCream,
+      // findOneAndUpdate() returns the user fields before they
+      // were updated
+      // You can disable this by
+      user,
     });
   } catch (err) {
     res.status(404).json({
@@ -132,10 +145,9 @@ const updateUser = async (req, res) => {
 // DELETE /api/users/:id
 const deleteUser = async (req, res) => {
   const id = req.params.id;
-  // Similar to updating a user we can findOneAndDelete() OR
-  // chain deleteOne() to a find() call
+
   try {
-    // One stop shop
+    // Similar to updating a user we can findOneAndDelete()
     const user = await User.findByIdAndDelete(id);
     if (!user) {
       res.status(404).json({
@@ -143,11 +155,12 @@ const deleteUser = async (req, res) => {
         Error: `No user found with id of ${id}`,
       });
     }
-    // OR
+    // OR we can chain deleteOne() to a find() call
     // await User.find({_id: id}).deleteOne();
     res
       .status(200)
       .json({ Success: true, Message: `User with id of ${id} deleted` });
+    return;
   } catch (err) {
     res.status(404).json({
       Success: false,
@@ -156,4 +169,4 @@ const deleteUser = async (req, res) => {
   }
 };
 
-export { getAllUsers, getUserById, registerUser, updateUser, deleteUser };
+export { getAllUsers, getUserById, createUser, updateUser, deleteUser };
